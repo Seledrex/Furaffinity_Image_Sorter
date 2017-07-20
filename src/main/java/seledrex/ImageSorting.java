@@ -106,7 +106,7 @@ class ImageSorting
 
         // Check if an output folder was given
         if (outputFolder == null) {
-            log.append("Output folder not set");
+            log.append("Output folder not set\n");
             return;
         }
 
