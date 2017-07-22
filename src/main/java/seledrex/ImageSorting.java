@@ -122,7 +122,7 @@ class ImageSorting
             }
 
             // Create regular expression
-            Pattern pattern = Pattern.compile("(\\d\\d\\d\\d\\d\\d\\d\\d\\d\\d.)([^_]*)(_)(.*)");
+            Pattern pattern = Pattern.compile("(\\d{10}.)([^_]*)(_)(.*)");
 
             // Loop through each of the files
             for (Pair<String, String> file : this.files)
