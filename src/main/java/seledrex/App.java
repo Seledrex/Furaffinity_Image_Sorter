@@ -137,7 +137,7 @@ public class App extends JPanel implements ActionListener
         else if (e.getSource() == clearInputButton)
         {
             sorter.clearInputFolders();
-            log.append("Removed input folder(s)");
+            log.append("Removed input folder(s)\n");
         }
     }
 
