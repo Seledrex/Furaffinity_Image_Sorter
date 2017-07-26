@@ -12,6 +12,7 @@ import java.io.PrintWriter;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import static org.apache.commons.lang.exception.ExceptionUtils.getStackTrace;
 
 //======================================================================================================================
 // Image Sorting
@@ -164,7 +165,7 @@ class ImageSorting
 
         try {
             // Create a print writer
-            writer = new PrintWriter(outputFolder.getAbsoluteFile() + "\\output.txt");
+            writer = new PrintWriter(outputFolder.getAbsolutePath() + "/output.txt");
 
             // Loop through each artist
             for (String artist : artists)
@@ -189,7 +190,7 @@ class ImageSorting
 
         // Catch exceptions
         } catch (Exception e) {
-            e.printStackTrace();
+            log.append("Error writing output.txt:\n" + getStackTrace(e));
         } finally {
             if (writer != null) writer.close();
         }
@@ -201,7 +202,7 @@ class ImageSorting
             List<Pair<String, String>> artwork = gallery.get(artist);
 
             // Open the directory for the artist
-            File artistDir = new File(outputFolder.getAbsoluteFile() + "\\" + artist);
+            File artistDir = new File(outputFolder.getAbsolutePath() + "/" + artist);
 
             // If the directory does not exist, create it
             if (!artistDir.exists())
@@ -215,17 +216,17 @@ class ImageSorting
             for (Pair<String, String> filename : artwork)
             {
                 // Open file inside artist directory
-                File check = new File(artistDir.getAbsolutePath() + "\\" + filename.getKey());
+                File check = new File(artistDir.getAbsolutePath() + "/" + filename.getKey());
 
                 // If the file does not exist, copy it
                 if (!check.exists())
                 {
                     try {
                         FileUtils.copyFile(new File(filename.getValue()),
-                                new File(artistDir.getAbsolutePath() + "\\" + filename.getKey()));
+                                new File(artistDir.getAbsolutePath() + "/" + filename.getKey()));
                         log.append("Copied: " + filename.getKey() + "\n");
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        log.append("Error copying files:\n" + getStackTrace(e));
                     }
                 }
             }
