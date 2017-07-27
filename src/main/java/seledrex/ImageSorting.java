@@ -6,6 +6,7 @@ package seledrex;
 
 import javafx.util.Pair;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import javax.swing.*;
 import java.io.File;
 import java.io.PrintWriter;
@@ -45,6 +46,7 @@ class ImageSorting
     private Map<String, List<Pair<String, String>>> gallery; // Maps artists to their respective artwork
     private List<File[]> inputFolders; // Stores the input folders supplied by user
     private File outputFolder; // Stores the output folder supplied by user
+    private static String[] validFormats = {"jpg", "jpeg", "png", "gif", "swf", "mid", "wav", "mp3", "mpeg"};
 
     //==================================================================================================================
     // Constructor
@@ -118,7 +120,13 @@ class ImageSorting
             {
                 // Add each file inside of the input folder
                 for (File file : inputFolder) {
-                    this.files.add( new Pair<String, String>(file.getName(), file.getAbsolutePath()));
+                    // Check if file extension is valid. Add file if valid, log error if not.
+                    if (formatIsValid(FilenameUtils.getExtension(file.getName()))) {
+                        this.files.add( new Pair<String, String>(file.getName(), file.getAbsolutePath()));
+                    }
+                    else {
+                        log.append("Error adding file: Invalid file format " + file.getAbsolutePath() + "\n");
+                    }
                 }
             }
 
@@ -231,5 +239,21 @@ class ImageSorting
                 }
             }
         }
+    }
+
+    /**
+     * Helper function for sort. Returns true if given extension is valid.
+     * @param extension  Extension to compare to valid extensions
+     * @return
+     */
+    private static boolean formatIsValid(String extension)
+    {
+        for (String format : validFormats) {
+            if (extension.equals(format)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
