@@ -125,7 +125,7 @@ class ImageSorting
                         this.files.add( new Pair<String, String>(file.getName(), file.getAbsolutePath()));
                     }
                     else {
-                        log.append("Error adding file: Invalid file format " + file.getAbsolutePath() + "\n");
+                        log.append("Error adding file: Invalid file format for file '" + file.getAbsolutePath() + "'\n");
                     }
                 }
             }
@@ -243,8 +243,9 @@ class ImageSorting
 
     /**
      * Helper function for sort. Returns true if given extension is valid.
-     * @param extension  Extension to compare to valid extensions
-     * @return
+     *
+     * @param extension  extension to compare to valid extensions
+     * @return           true if valid format, false otherwise
      */
     private static boolean formatIsValid(String extension)
     {
