@@ -344,6 +344,7 @@ public class App extends JPanel implements ActionListener
                 // Close client and window
                 webClient.close();
                 super.windowClosing(windowEvent);
+                System.exit(0);
             }
         });
 
