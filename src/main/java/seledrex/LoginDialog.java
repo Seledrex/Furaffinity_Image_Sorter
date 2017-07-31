@@ -36,6 +36,7 @@ public class LoginDialog extends JDialog implements ActionListener {
     private JPasswordField passwordField;
     private JTextField capchaField;
     private JButton loginButton, cancelButton;
+    private JLabel capchaImageLabel;
     private ImageIcon capchaImage;
     private HtmlPage faCapchaLoginPage;
     private App app;
@@ -65,23 +66,13 @@ public class LoginDialog extends JDialog implements ActionListener {
             HtmlAnchor anchor = faDefaultLoginPage.getAnchorByHref("/login/?mode=imagecaptcha");
             faCapchaLoginPage = anchor.click();
 
-            // Download capcha image
-            HtmlImage capcha = faCapchaLoginPage.getHtmlElementById("captcha_img");
-            capcha.saveAs(new File("capcha.jpg"));
-
         } catch (Exception e) {
-            app.appendToLog("Error getting capcha image from Furaffinity's login page:\n" + getStackTrace(e));
+            app.appendToLog("Error getting Furaffinity's login page:\n" + getStackTrace(e));
             this.dispose();
         }
 
-        try {
-            // Read in capcha image
-            BufferedImage img = ImageIO.read(new File("capcha.jpg"));
-            capchaImage = new ImageIcon(img);
-        } catch (Exception e) {
-            app.appendToLog("Error reading capcha image:\n" + getStackTrace(e));
-            this.dispose();
-        }
+        // Download capcha image
+        capchaImage = downloadCapcha();
 
         // Create panel for login dialog
         JPanel dialogPanel = new JPanel(new GridBagLayout());
@@ -132,7 +123,7 @@ public class LoginDialog extends JDialog implements ActionListener {
         dialogPanel.add(capchaField, cs);
 
         // Add capcha image
-        JLabel capchaImageLabel = new JLabel(capchaImage);
+        capchaImageLabel = new JLabel(capchaImage);
         cs.gridx = 0;
         cs.gridy = 3;
         cs.gridwidth = 3;
@@ -270,9 +261,58 @@ public class LoginDialog extends JDialog implements ActionListener {
         if (afterLoginClick != null) {
             if (afterLoginClick.getUrl().toString().equals("http://www.furaffinity.net/")) {
                 return true;
+            } else {
+                // Get capcha log in page again
+                try {
+                    HtmlAnchor anchor = afterLoginClick.getAnchorByHref("/login/?mode=imagecaptcha");
+                    faCapchaLoginPage = anchor.click();
+                } catch (Exception e) {
+                    app.appendToLog("Error getting Furaffinity's login page:\n" + getStackTrace(e));
+                    this.dispose();
+                }
+
+                // Download and set capcha again
+                capchaImage = downloadCapcha();
+                capchaImageLabel.setIcon(capchaImage);
             }
         }
 
         return false;
+    }
+
+    /**
+     * Downloads and returns capcha image from Furaffinity's login.
+     *
+     * @return  ImageIcon containing the capcha image
+     */
+    private ImageIcon downloadCapcha() {
+        try {
+            // Download capcha image
+            HtmlImage capcha = faCapchaLoginPage.getHtmlElementById("captcha_img");
+            capcha.saveAs(new File("capcha.jpg"));
+
+        } catch (Exception e) {
+            app.appendToLog("Error getting capcha image from Furaffinity's login page:\n" + getStackTrace(e));
+            this.dispose();
+        }
+
+        ImageIcon capcha;
+        BufferedImage img = null;
+
+        try {
+            // Read in capcha image
+            img = ImageIO.read(new File("capcha.jpg"));
+        } catch (Exception e) {
+            app.appendToLog("Error reading capcha image:\n" + getStackTrace(e));
+            this.dispose();
+        }
+
+        if (img != null) {
+            capcha = new ImageIcon(img);
+            return capcha;
+        } else {
+            this.dispose();
+            return null;
+        }
     }
 }
