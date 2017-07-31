@@ -1,1 +1,4 @@
 target/
+user.properties
+capcha.jpg
+cookie.file

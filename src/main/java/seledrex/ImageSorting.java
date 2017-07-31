@@ -7,7 +7,6 @@ package seledrex;
 import javafx.util.Pair;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
-import javax.swing.*;
 import java.io.File;
 import java.io.PrintWriter;
 import java.util.*;
@@ -96,20 +95,18 @@ class ImageSorting
      * Where all the fun really happens! Each individual file is parsed
      * using the regular expression, and then are properly sorted and
      * copied to their proper locations.
-     *
-     * @param log  log to print to
      */
-    void sortImages(JTextArea log)
+    void sortImages(App app)
     {
         // Check if an input folder was given
         if (inputFolders.isEmpty()) {
-            log.append("Input folder(s) not added\n");
+            app.appendToLog("Input folder(s) not added\n");
             return;
         }
 
         // Check if an output folder was given
         if (outputFolder == null) {
-            log.append("Output folder not set\n");
+            app.appendToLog("Output folder not set\n");
             return;
         }
 
@@ -125,7 +122,7 @@ class ImageSorting
                         this.files.add( new Pair<String, String>(file.getName(), file.getAbsolutePath()));
                     }
                     else {
-                        log.append("Error adding file: Invalid file format for file '" + file.getAbsolutePath() + "'\n");
+                        app.appendToLog("Error adding file: Invalid file format for file '" + file.getAbsolutePath() + "'\n");
                     }
                 }
             }
@@ -198,7 +195,7 @@ class ImageSorting
 
         // Catch exceptions
         } catch (Exception e) {
-            log.append("Error writing output.txt:\n" + getStackTrace(e));
+            app.appendToLog("Error writing output.txt:\n" + getStackTrace(e));
         } finally {
             if (writer != null) writer.close();
         }
@@ -216,7 +213,7 @@ class ImageSorting
             if (!artistDir.exists())
             {
                 if (artistDir.mkdir()) {
-                    log.append("Made new directory: " + artistDir.getAbsolutePath() + "\n");
+                    app.appendToLog("Made new directory: " + artistDir.getAbsolutePath() + "\n");
                 }
             }
 
@@ -232,9 +229,9 @@ class ImageSorting
                     try {
                         FileUtils.copyFile(new File(filename.getValue()),
                                 new File(artistDir.getAbsolutePath() + "/" + filename.getKey()));
-                        log.append("Copied: " + filename.getKey() + "\n");
+                        app.appendToLog("Copied: " + filename.getKey() + "\n");
                     } catch (Exception e) {
-                        log.append("Error copying files:\n" + getStackTrace(e));
+                        app.appendToLog("Error copying files:\n" + getStackTrace(e));
                     }
                 }
             }

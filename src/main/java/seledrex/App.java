@@ -4,11 +4,20 @@ package seledrex;
 // Imports
 //======================================================================================================================
 
+import com.gargoylesoftware.htmlunit.CookieManager;
+import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import com.gargoylesoftware.htmlunit.util.Cookie;
+import org.apache.commons.configuration.PropertiesConfiguration;
 import java.io.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.swing.*;
 import javax.swing.SwingUtilities;
+import static org.apache.commons.lang3.exception.ExceptionUtils.getStackTrace;
 
 //======================================================================================================================
 // App
@@ -31,17 +40,34 @@ public class App extends JPanel implements ActionListener
     //==================================================================================================================
 
     private JButton addFolderButton, clearInputButton, setOutputButton, sortButton; // Buttons
+    private JButton loginButton, logoutButton, dlFavsButton, dlGalleryButton;
+    private JLabel statusLabel;
     private JTextArea log; // Log
     private JFileChooser fc; // File chooser
     private ImageSorting sorter; // Image sorter
+    private static WebClient webClient;
+    private static JFrame frame;
+    private static PropertiesConfiguration properties;
+    private String username;
 
     //==================================================================================================================
     // Constructor
     //==================================================================================================================
 
+    @SuppressWarnings("unchecked")
     private App()
     {
         super(new BorderLayout());
+
+        // Create new web client
+        webClient = new WebClient();
+        webClient.getOptions().setCssEnabled(false);
+        webClient.getOptions().setJavaScriptEnabled(false);
+
+        // Enable cookies
+        CookieManager manager = webClient.getCookieManager();
+        manager.setCookiesEnabled(true);
+        webClient.setCookieManager(manager);
 
         // Create the log object and make it scrollable
         log = new JTextArea(20,100);
@@ -58,32 +84,159 @@ public class App extends JPanel implements ActionListener
         // Set the image sorter so that it will only show directories
         fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 
+        statusLabel = new JLabel("Not logged in");
+        statusLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        statusLabel.setVerticalTextPosition(SwingConstants.CENTER);
+        statusLabel.setPreferredSize(new Dimension(145, 25));
+
+        loginButton = new JButton("Login");
+        loginButton.setPreferredSize(new Dimension(75, 25));
+        loginButton.addActionListener(this);
+
+        logoutButton = new JButton("Logout");
+        logoutButton.setPreferredSize(new Dimension(75, 25));
+        logoutButton.addActionListener(this);
+
+        dlFavsButton = new JButton("Download favorites");
+        dlFavsButton.setPreferredSize(new Dimension(150, 25));
+        dlFavsButton.addActionListener(this);
+
+        dlGalleryButton = new JButton("Download gallery");
+        dlGalleryButton.setPreferredSize(new Dimension(150, 25));
+        dlGalleryButton.addActionListener(this);
+
         // Create the 'Add input folder' button
         addFolderButton = new JButton("Add input folder");
+        addFolderButton.setPreferredSize(new Dimension(150, 25));
         addFolderButton.addActionListener(this);
 
         // Create the 'Sort images' button
         sortButton = new JButton("Sort images");
+        sortButton.setPreferredSize(new Dimension(150, 25));
         sortButton.addActionListener(this);
 
         // Create the 'Set output folder' button
         setOutputButton = new JButton("Set output folder");
+        setOutputButton.setPreferredSize(new Dimension(150, 25));
         setOutputButton.addActionListener(this);
 
         // Create the 'Remove input folder(s)' button
         clearInputButton = new JButton("Remove input folder(s)");
+        clearInputButton.setPreferredSize(new Dimension(150, 25));
         clearInputButton.addActionListener(this);
 
         // Create a new panel to hold all the buttons
-        JPanel buttonPanel = new JPanel(); //use FlowLayout
-        buttonPanel.add(addFolderButton);
-        buttonPanel.add(clearInputButton);
-        buttonPanel.add(setOutputButton);
-        buttonPanel.add(sortButton);
+        JPanel topPanel = new JPanel(new GridBagLayout()); //use FlowLayout
+        GridBagConstraints cs = new GridBagConstraints();
+        cs.fill = GridBagConstraints.HORIZONTAL;
+
+        cs.gridx = 0;
+        cs.gridy = 0;
+        cs.gridwidth = 2;
+        topPanel.add(statusLabel, cs);
+
+        cs.gridx = 0;
+        cs.gridy = 1;
+        cs.gridwidth = 1;
+        topPanel.add(loginButton, cs);
+
+        cs.gridx = 1;
+        cs.gridy = 1;
+        cs.gridwidth = 1;
+        topPanel.add(logoutButton, cs);
+
+        cs.gridx = 2;
+        cs.gridy = 0;
+        cs.gridwidth = 1;
+        topPanel.add(dlFavsButton, cs);
+
+        cs.gridx = 2;
+        cs.gridy = 1;
+        cs.gridwidth = 1;
+        topPanel.add(dlGalleryButton, cs);
+
+        cs.gridx = 3;
+        cs.gridy = 0;
+        cs.gridwidth = 1;
+        topPanel.add(addFolderButton, cs);
+
+        cs.gridx = 3;
+        cs.gridy = 1;
+        cs.gridwidth = 1;
+        topPanel.add(clearInputButton, cs);
+
+        cs.gridx = 4;
+        cs.gridy = 0;
+        cs.gridwidth = 1;
+        topPanel.add(setOutputButton, cs);
+
+        cs.gridx = 4;
+        cs.gridy = 1;
+        cs.gridwidth = 1;
+        topPanel.add(sortButton, cs);
 
         // Add the button panel and log to the main panel
-        add(buttonPanel, BorderLayout.PAGE_START);
+        add(topPanel, BorderLayout.PAGE_START);
         add(logScrollPane, BorderLayout.CENTER);
+
+        // Create new properties configuration
+        properties = new PropertiesConfiguration();
+
+        // Load properties and cookies if they exist
+        if (new File("user.properties").exists())
+        {
+            try {
+                // Read in properties file
+                FileReader reader = new FileReader("user.properties");
+                properties.load(reader);
+                reader.close();
+
+                // Check for username
+                if (properties.getString("username") != null) {
+
+                    File cookieFile = new File("cookie.file");
+
+                    // Check if cookies exist
+                    if (cookieFile.exists())
+                    {
+                        Set<Cookie> cookies;
+
+                        // Read in cookies
+                        ObjectInputStream in = new ObjectInputStream(new FileInputStream(cookieFile));
+                        cookies = (Set<Cookie>) in.readObject();
+                        in.close();
+
+                        // Set cookies in web client
+                        if (cookies != null) {
+                            for (Cookie cookie : cookies) {
+                                webClient.getCookieManager().addCookie(cookie);
+                            }
+                        }
+
+                        // Open Furaffinity homepage
+                        HtmlPage checkSuccess = webClient.getPage("http://www.furaffinity.net/");
+                        String page = checkSuccess.asText();
+
+                        // Use regular expression to check for Log Out
+                        Pattern pattern = Pattern.compile("(Log Out|log out)");
+                        Matcher m = pattern.matcher(page);
+
+                        // Pattern is found
+                        if (m.find()) {
+                            username = properties.getString("username");
+                            setStatus("Welcome " + username + "!");
+                            loginButton.setEnabled(false);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.append("Error reading configuration information:\n" + getStackTrace(e));
+            }
+        }
+        // Create new properties file otherwise
+        else {
+            properties.addProperty("username", "");
+        }
     }
 
     //==================================================================================================================
@@ -130,7 +283,7 @@ public class App extends JPanel implements ActionListener
         else if (e.getSource() == sortButton)
         {
             log.append("Sorting images..." + "\n");
-            sorter.sortImages(log);
+            sorter.sortImages(this);
             log.setCaretPosition(log.getDocument().getLength());
         }
         // Handles the 'Remove input folder(s)' button
@@ -138,6 +291,18 @@ public class App extends JPanel implements ActionListener
         {
             sorter.clearInputFolders();
             log.append("Removed input folder(s)\n");
+        }
+        // Handles login button
+        else if (e.getSource() == loginButton)
+        {
+            LoginDialog loginDialog = new LoginDialog(frame, webClient, this);
+            loginDialog.setVisible(true);
+
+            if (loginDialog.isSuccessful()) {
+                setStatus("Welcome " + loginDialog.getUsername() + "!");
+                setUsername(loginDialog.getUsername());
+                loginButton.setEnabled(false);
+            }
         }
     }
 
@@ -147,9 +312,40 @@ public class App extends JPanel implements ActionListener
     private static void createAndShowGUI()
     {
         // Creates the JFrame
-        JFrame frame = new JFrame("Furaffinity Image Sorter");
-        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        frame = new JFrame("Furaffinity Image Sorter");
         frame.add(new App());
+
+        // Override window closing event
+        frame.addWindowListener(new WindowAdapter(){
+            @Override
+            public void windowClosing(WindowEvent windowEvent)
+            {
+                PrintWriter writer = null;
+
+                // Writer properties to file
+                try {
+                    writer = new PrintWriter("user.properties");
+                    properties.save(writer);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    if (writer != null) writer.close();
+                }
+
+                // Write cookies to file
+                try {
+                    ObjectOutput out = new ObjectOutputStream(new FileOutputStream("cookie.file"));
+                    out.writeObject(webClient.getCookieManager().getCookies());
+                    out.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                // Close client and window
+                webClient.close();
+                super.windowClosing(windowEvent);
+            }
+        });
 
         // Set size and center window
         frame.setSize(1280, 720);
@@ -158,6 +354,34 @@ public class App extends JPanel implements ActionListener
         // Create and show window
         frame.pack();
         frame.setVisible(true);
+    }
+
+    /**
+     * Appends to the application's log.
+     *
+     * @param message  message to append
+     */
+    void appendToLog(String message) {
+        log.append(message);
+    }
+
+    /**
+     * Sets the application's status label.
+     *
+     * @param status  status message to set
+     */
+    private void setStatus(String status) {
+        statusLabel.setText(status);
+    }
+
+    /**
+     * Sets the username currently being used.
+     *
+     * @param username  username to set
+     */
+    private void setUsername(String username) {
+        this.username = username;
+        properties.setProperty("username", username);
     }
 
     //==================================================================================================================
