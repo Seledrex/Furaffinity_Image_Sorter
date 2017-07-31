@@ -24,6 +24,7 @@ Furaffinity Image Sorter can sort multiple folders at once. The sorting algorith
 
 ## TODO
 
+- Add loading progress bars/circle things
 - Create recursive file searching for input folders
 - Download and sort all submissions/favorites feature
 - Download and sort all artwork from a user's gallery feature
