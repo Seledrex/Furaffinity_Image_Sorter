@@ -49,6 +49,7 @@ public class App extends JPanel implements ActionListener
     private static JFrame frame;
     private static PropertiesConfiguration properties;
     private String username;
+    private static boolean loggedIn;
 
     //==================================================================================================================
     // Constructor
@@ -68,6 +69,9 @@ public class App extends JPanel implements ActionListener
         CookieManager manager = webClient.getCookieManager();
         manager.setCookiesEnabled(true);
         webClient.setCookieManager(manager);
+
+        // Set logged in
+        loggedIn = false;
 
         // Create the log object and make it scrollable
         log = new JTextArea(20,100);
@@ -95,14 +99,17 @@ public class App extends JPanel implements ActionListener
 
         logoutButton = new JButton("Logout");
         logoutButton.setPreferredSize(new Dimension(75, 25));
+        logoutButton.setEnabled(false);
         logoutButton.addActionListener(this);
 
         dlFavsButton = new JButton("Download favorites");
         dlFavsButton.setPreferredSize(new Dimension(150, 25));
+        dlFavsButton.setEnabled(false);
         dlFavsButton.addActionListener(this);
 
         dlGalleryButton = new JButton("Download gallery");
         dlGalleryButton.setPreferredSize(new Dimension(150, 25));
+        dlGalleryButton.setEnabled(false);
         dlGalleryButton.addActionListener(this);
 
         // Create the 'Add input folder' button
@@ -225,7 +232,11 @@ public class App extends JPanel implements ActionListener
                         if (m.find()) {
                             username = properties.getString("username");
                             setStatus("Welcome " + username + "!");
+                            loggedIn = true;
                             loginButton.setEnabled(false);
+                            logoutButton.setEnabled(true);
+                            dlFavsButton.setEnabled(true);
+                            dlGalleryButton.setEnabled(true);
                         }
                     }
                 }
@@ -292,17 +303,41 @@ public class App extends JPanel implements ActionListener
             sorter.clearInputFolders();
             log.append("Removed input folder(s)\n");
         }
-        // Handles login button
+        // Handles 'Login' button
         else if (e.getSource() == loginButton)
         {
+            // Create and show new dialog
             LoginDialog loginDialog = new LoginDialog(frame, webClient, this);
             loginDialog.setVisible(true);
 
+            // Check for successful login
             if (loginDialog.isSuccessful()) {
                 setStatus("Welcome " + loginDialog.getUsername() + "!");
                 setUsername(loginDialog.getUsername());
+                loggedIn = true;
                 loginButton.setEnabled(false);
+                logoutButton.setEnabled(true);
+                dlFavsButton.setEnabled(true);
+                dlGalleryButton.setEnabled(true);
             }
+        }
+        // Handles 'Logout' button
+        else if (e.getSource() == logoutButton) {
+            // Clear user data
+            setUsername("");
+            setStatus("Not logged in");
+            loggedIn = false;
+            logoutButton.setEnabled(false);
+            dlFavsButton.setEnabled(false);
+            dlGalleryButton.setEnabled(false);
+            loginButton.setEnabled(true);
+
+            // Show dialog
+            JOptionPane.showMessageDialog(
+                    this,
+                    "You have successfully logged out.",
+                    "Logout Success",
+                    JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
@@ -333,12 +368,21 @@ public class App extends JPanel implements ActionListener
                 }
 
                 // Write cookies to file
-                try {
-                    ObjectOutput out = new ObjectOutputStream(new FileOutputStream("cookie.file"));
-                    out.writeObject(webClient.getCookieManager().getCookies());
-                    out.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
+                if (loggedIn) {
+                    try {
+                        ObjectOutput out = new ObjectOutputStream(new FileOutputStream("cookie.file"));
+                        out.writeObject(webClient.getCookieManager().getCookies());
+                        out.close();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    File cookieFile = new File("cookie.file");
+                    if (cookieFile.exists()) {
+                        if (!cookieFile.delete()) {
+                            System.err.println("Could not delete cookie file");
+                        }
+                    }
                 }
 
                 // Close client and window
