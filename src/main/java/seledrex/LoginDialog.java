@@ -28,6 +28,8 @@ import static org.apache.commons.lang.exception.ExceptionUtils.getStackTrace;
  */
 public class LoginDialog extends JDialog implements ActionListener {
 
+
+
     //==================================================================================================================
     // Properties
     //==================================================================================================================
@@ -39,7 +41,7 @@ public class LoginDialog extends JDialog implements ActionListener {
     private JLabel capchaImageLabel;
     private ImageIcon capchaImage;
     private HtmlPage faCapchaLoginPage;
-    private App app;
+    private final App app;
     private boolean successful;
 
     //==================================================================================================================
@@ -146,6 +148,19 @@ public class LoginDialog extends JDialog implements ActionListener {
         getContentPane().add(dialogPanel, BorderLayout.CENTER);
         getContentPane().add(buttonPanel, BorderLayout.PAGE_END);
 
+        JComponent loadingPane = new JComponent() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                g.setColor(new Color(1f, 1f, 1f, .8f));
+                g.fillRect(0, 0, getWidth(), getHeight());
+            }
+        };
+
+        loadingPane.setLayout(new BorderLayout());
+        loadingPane.add(new JLabel(new ImageIcon("ajax-loader.gif"), JLabel.CENTER), BorderLayout.CENTER);
+
+        setGlassPane(loadingPane);
+
         // Pack and set settings
         pack();
         setResizable(false);
@@ -162,22 +177,48 @@ public class LoginDialog extends JDialog implements ActionListener {
     {
         // Handles login button
         if (e.getSource() == loginButton) {
-            if (authenticate(getUsername(), getPassword(), getCapcha())) {
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Welcome " + getUsername() + "! You have successfully logged in.",
-                        "Login Success",
-                        JOptionPane.INFORMATION_MESSAGE);
-                successful = true;
-                this.dispose();
-            } else {
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Invalid username or password.",
-                        "Login Failure",
-                        JOptionPane.ERROR_MESSAGE);
-                successful = false;
-            }
+
+            // Crazy voodoo magic that lets you update the GUI while also authenticating!
+            SwingWorker<String, Object> worker = new SwingWorker<String, Object>() {
+
+                @Override
+                protected String doInBackground() throws Exception {
+                    // Authenticate in the background
+                    authenticate(getUsername(), getPassword(), getCapcha());
+                    return null;
+                }
+
+                @Override
+                protected void done() {
+                    // Authentication finished
+                    if (successful) {
+                        JOptionPane.showMessageDialog(
+                                LoginDialog.this,
+                                "Welcome " + getUsername() + "! You have successfully logged in.",
+                                "Login Success",
+                                JOptionPane.INFORMATION_MESSAGE);
+                        successful = true;
+                        LoginDialog.this.dispose();
+                    } else {
+                        JOptionPane.showMessageDialog(
+                                LoginDialog.this,
+                                "Invalid username or password.",
+                                "Login Failure",
+                                JOptionPane.ERROR_MESSAGE);
+                        successful = false;
+                    }
+
+                    // Hide the loading panel
+                    LoginDialog.this.getGlassPane().setVisible(false);
+                }
+            };
+
+            // Execute background task
+            worker.execute();
+
+            // Set loading panel to visible
+            getGlassPane().setVisible(true);
+
         // Handles cancel button
         } else if (e.getSource() == cancelButton) {
             this.dispose();
@@ -229,9 +270,8 @@ public class LoginDialog extends JDialog implements ActionListener {
      * @param username  username to login with
      * @param password  password to login with
      * @param capcha    capcha message
-     * @return          true on success, false otherwise
      */
-    private boolean authenticate(String username, String password, String capcha)
+    private void authenticate(String username, String password, String capcha)
     {
         // Get the login form
         List<HtmlForm> formList = faCapchaLoginPage.getForms();
@@ -260,7 +300,8 @@ public class LoginDialog extends JDialog implements ActionListener {
         // Check if we are returned to homepage
         if (afterLoginClick != null) {
             if (afterLoginClick.getUrl().toString().equals("http://www.furaffinity.net/")) {
-                return true;
+                successful = true;
+                return;
             } else {
                 // Get capcha log in page again
                 try {
@@ -277,7 +318,7 @@ public class LoginDialog extends JDialog implements ActionListener {
             }
         }
 
-        return false;
+        successful = false;
     }
 
     /**
