@@ -281,8 +281,7 @@ public class App extends JPanel implements ActionListener
         {
             int returnVal = fc.showOpenDialog(App.this);
 
-            if (returnVal == JFileChooser.APPROVE_OPTION)
-            {
+            if (returnVal == JFileChooser.APPROVE_OPTION) {
                 File file = fc.getSelectedFile();
                 log.append("Set output folder: " + file.getAbsolutePath() + "\n");
                 sorter.setOutputFolder(file);
@@ -293,9 +292,21 @@ public class App extends JPanel implements ActionListener
         // Handles the 'Sort images' button
         else if (e.getSource() == sortButton)
         {
-            log.append("Sorting images..." + "\n");
-            sorter.sortImages(this);
-            log.setCaretPosition(log.getDocument().getLength());
+            SwingWorker<String, Object> worker = new SwingWorker<String, Object>() {
+                @Override
+                protected String doInBackground() throws Exception {
+                    // Authenticate in the background
+                    log.append("Sorting images..." + "\n");
+                    sorter.sortImages(App.this);
+                    return null;
+                }
+
+                @Override
+                protected void done() {
+                    log.setCaretPosition(log.getDocument().getLength());
+                }
+            };
+            worker.execute();
         }
         // Handles the 'Remove input folder(s)' button
         else if (e.getSource() == clearInputButton)
@@ -408,6 +419,7 @@ public class App extends JPanel implements ActionListener
      */
     void appendToLog(String message) {
         log.append(message);
+        log.setCaretPosition(log.getText().length() - 1);
     }
 
     /**
