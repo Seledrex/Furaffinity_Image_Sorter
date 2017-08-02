@@ -247,7 +247,7 @@ class ImageSorting
     private static boolean formatIsValid(String extension)
     {
         for (String format : validFormats) {
-            if (extension.equals(format)) {
+            if (extension.toLowerCase().equals(format)) {
                 return true;
             }
         }
