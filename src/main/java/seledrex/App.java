@@ -41,15 +41,15 @@ public class App extends JPanel implements ActionListener
 
     private JButton addFolderButton, clearInputButton, setOutputButton, sortButton; // Buttons
     private JButton loginButton, logoutButton, dlFavsButton, dlGalleryButton;
-    private JLabel statusLabel;
+    private JLabel statusLabel, stashLabel;
     private JTextArea log; // Log
     private JFileChooser fc; // File chooser
     private ImageSorting sorter; // Image sorter
-    private static WebClient webClient;
+    private WebClient webClient;
     private static JFrame frame;
-    private static PropertiesConfiguration properties;
+    private PropertiesConfiguration properties;
     private String username;
-    private static boolean loggedIn;
+    private boolean loggedIn;
 
     //==================================================================================================================
     // Constructor
@@ -93,6 +93,11 @@ public class App extends JPanel implements ActionListener
         statusLabel.setVerticalTextPosition(SwingConstants.CENTER);
         statusLabel.setPreferredSize(new Dimension(145, 25));
 
+        stashLabel = new JLabel("Stash not set");
+        stashLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        stashLabel.setPreferredSize(new Dimension(300, 25));
+        stashLabel.setBorder(BorderFactory.createEmptyBorder(0, 10,0,0));
+
         loginButton = new JButton("Login");
         loginButton.setPreferredSize(new Dimension(75, 25));
         loginButton.addActionListener(this);
@@ -123,7 +128,7 @@ public class App extends JPanel implements ActionListener
         sortButton.addActionListener(this);
 
         // Create the 'Set output folder' button
-        setOutputButton = new JButton("Set output folder");
+        setOutputButton = new JButton("Set stash");
         setOutputButton.setPreferredSize(new Dimension(150, 25));
         setOutputButton.addActionListener(this);
 
@@ -185,6 +190,7 @@ public class App extends JPanel implements ActionListener
         // Add the button panel and log to the main panel
         add(topPanel, BorderLayout.PAGE_START);
         add(logScrollPane, BorderLayout.CENTER);
+        add(stashLabel, BorderLayout.PAGE_END);
 
         // Create new properties configuration
         properties = new PropertiesConfiguration();
@@ -247,6 +253,7 @@ public class App extends JPanel implements ActionListener
         // Create new properties file otherwise
         else {
             properties.addProperty("username", "");
+            properties.addProperty("stash", "");
         }
     }
 
@@ -352,54 +359,96 @@ public class App extends JPanel implements ActionListener
         }
     }
 
+    private void close()
+    {
+        PrintWriter writer = null;
+
+        // Writer properties to file
+        try {
+            writer = new PrintWriter("user.properties");
+            properties.save(writer);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (writer != null) writer.close();
+        }
+
+        // Write cookies to file
+        if (loggedIn) {
+            try {
+                ObjectOutput out = new ObjectOutputStream(new FileOutputStream("cookie.file"));
+                out.writeObject(webClient.getCookieManager().getCookies());
+                out.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else {
+            File cookieFile = new File("cookie.file");
+            if (cookieFile.exists()) {
+                if (!cookieFile.delete()) {
+                    System.err.println("Could not delete cookie file");
+                }
+            }
+        }
+
+        // Close client and window
+        webClient.close();
+    }
+
+    private void initialize()
+    {
+        String stash = properties.getString("stash");
+
+        if (stash != null) {
+            File stashFile = new File(stash);
+            if (stashFile.exists()) {
+                stashLabel.setText("Stash location: " + stashFile.getAbsolutePath());
+                return;
+            }
+        }
+
+        JOptionPane.showMessageDialog(
+                this,
+                "Please select a folder to be your art stash.",
+                "Set Stash",
+                JOptionPane.INFORMATION_MESSAGE);
+
+        int returnVal = fc.showOpenDialog(App.this);
+
+        if (returnVal == JFileChooser.APPROVE_OPTION)
+        {
+            File stashFile = fc.getSelectedFile();
+            properties.setProperty("stash", stashFile.getAbsolutePath());
+            stashLabel.setText("Stash location: " + stashFile.getAbsolutePath());
+        } else {
+            System.exit(1);
+        }
+    }
+
     /**
      * Builds the GUI and then shows the window.
      */
     private static void createAndShowGUI()
     {
+        final App app = new App();
+
         // Creates the JFrame
         frame = new JFrame("Furaffinity Image Sorter");
-        frame.add(new App());
+        frame.add(app);
 
         // Override window closing event
         frame.addWindowListener(new WindowAdapter(){
             @Override
             public void windowClosing(WindowEvent windowEvent)
             {
-                PrintWriter writer = null;
-
-                // Writer properties to file
-                try {
-                    writer = new PrintWriter("user.properties");
-                    properties.save(writer);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                } finally {
-                    if (writer != null) writer.close();
-                }
-
-                // Write cookies to file
-                if (loggedIn) {
-                    try {
-                        ObjectOutput out = new ObjectOutputStream(new FileOutputStream("cookie.file"));
-                        out.writeObject(webClient.getCookieManager().getCookies());
-                        out.close();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                } else {
-                    File cookieFile = new File("cookie.file");
-                    if (cookieFile.exists()) {
-                        if (!cookieFile.delete()) {
-                            System.err.println("Could not delete cookie file");
-                        }
-                    }
-                }
-
-                // Close client and window
-                webClient.close();
+                app.close();
                 super.windowClosing(windowEvent);
                 System.exit(0);
+            }
+
+            @Override
+            public void windowOpened(WindowEvent e) {
+                app.initialize();
             }
         });
 
