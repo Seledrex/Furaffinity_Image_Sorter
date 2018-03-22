@@ -34,10 +34,12 @@ import static java.util.concurrent.Executors.newFixedThreadPool;
 import static org.apache.commons.lang3.exception.ExceptionUtils.getStackTrace;
 
 //======================================================================================================================
-// DownloadDialog
+// DownloadDialogOld
 //======================================================================================================================
 
 /**
+ * DEPRECATED
+ *
  * This class implements the download dialog box that allows users to download artwork of their
  * choosing. A window will be displayed, and the user can type in the username of artwork they
  * wish to download artwork from. After typing in a username, the user can download the gallery,

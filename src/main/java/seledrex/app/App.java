@@ -32,6 +32,9 @@ import static org.apache.commons.lang3.exception.ExceptionUtils.getStackTrace;
  * primary screen. A log is created in the center below a panel that holds
  * all the buttons.
  *
+ * Use this command to compile a JAR File:
+ * clean compile assembly:single
+ *
  * @author Eric Auster
  */
 public class App extends JPanel implements ActionListener
