@@ -1,4 +1,4 @@
-package seledrex;
+package seledrex.app;
 
 //======================================================================================================================
 // Imports
@@ -26,9 +26,8 @@ import static org.apache.commons.lang.exception.ExceptionUtils.getStackTrace;
  * username, password, and capcha message. A dialog message will be
  * displayed whether the login was successful or not.
  */
-public class LoginDialog extends JDialog implements ActionListener {
-
-
+public class LoginDialog extends JDialog implements ActionListener
+{
 
     //==================================================================================================================
     // Properties
@@ -182,7 +181,7 @@ public class LoginDialog extends JDialog implements ActionListener {
             SwingWorker<String, Object> worker = new SwingWorker<String, Object>() {
 
                 @Override
-                protected String doInBackground() throws Exception {
+                protected String doInBackground() {
                     // Authenticate in the background
                     authenticate(getUsername(), getPassword(), getCapcha());
                     return null;
@@ -326,7 +325,8 @@ public class LoginDialog extends JDialog implements ActionListener {
      *
      * @return  ImageIcon containing the capcha image
      */
-    private ImageIcon downloadCapcha() {
+    private ImageIcon downloadCapcha()
+    {
         try {
             // Download capcha image
             HtmlImage capcha = faCapchaLoginPage.getHtmlElementById("captcha_img");

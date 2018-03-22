@@ -1,4 +1,4 @@
-package seledrex;
+package seledrex.app;
 
 //======================================================================================================================
 // Imports
@@ -35,7 +35,7 @@ import static org.apache.commons.lang.exception.ExceptionUtils.getStackTrace;
  *
  * @author Eric Auster
  */
-class ImageSorting
+class ArtworkSorter
 {
     //==================================================================================================================
     // Properties
@@ -45,7 +45,8 @@ class ImageSorting
     private Map<String, List<Pair<String, String>>> gallery; // Maps artists to their respective artwork
     private List<File[]> inputFolders; // Stores the input folders supplied by user
     private File outputFolder; // Stores the output folder supplied by user
-    private static String[] validFormats = {"jpg", "jpeg", "png", "gif", "swf", "mid", "wav", "mp3", "mpeg"};
+    private static String[] validFormats = {"jpg", "jpeg", "png", "gif", "swf", "mid", "wav", "mp3", "mpeg", "txt", "docx"};
+    private final App app;
 
     //==================================================================================================================
     // Constructor
@@ -55,12 +56,13 @@ class ImageSorting
      * Initializes the data structures and variables for the
      * image sorter.
      */
-    ImageSorting()
+    ArtworkSorter(App app)
     {
         files = new ArrayList<Pair<String, String>>();
         gallery = new HashMap<String, List<Pair<String, String>>>();
         inputFolders = new ArrayList<File[]>();
         outputFolder = null;
+        this.app = app;
     }
 
     //==================================================================================================================
@@ -74,11 +76,6 @@ class ImageSorting
      * @param path  path to input folder
      */
     void addInputFolder(String path) { inputFolders.add(new File(path).listFiles()); }
-
-    /**
-     * Clears all the input folders currently stored.
-     */
-    void clearInputFolders() { inputFolders.clear(); }
 
     /**
      * Sets the output folder that all files will be saved to.
@@ -96,7 +93,7 @@ class ImageSorting
      * using the regular expression, and then are properly sorted and
      * copied to their proper locations.
      */
-    void sortImages(App app)
+    void sortInputFolders()
     {
         // Check if an input folder was given
         if (inputFolders.isEmpty()) {
@@ -122,7 +119,7 @@ class ImageSorting
                         this.files.add( new Pair<String, String>(file.getName(), file.getAbsolutePath()));
                     }
                     else {
-                        app.appendToLog("Error adding file: Invalid file format for file '" + file.getAbsolutePath() + "'\n");
+                        app.appendToLog("Invalid file format for file '" + file.getAbsolutePath() + "'\n");
                     }
                 }
             }
@@ -234,6 +231,56 @@ class ImageSorting
                         app.appendToLog("Error copying files:\n" + getStackTrace(e));
                     }
                 }
+            }
+        }
+    }
+
+    public void sortFile(File file)
+    {
+        // Create regular expression
+        Pattern pattern = Pattern.compile("(\\d{10}.)([^_]*)(_)(.*)");
+
+        // Use regular expression
+        Matcher m = pattern.matcher(file.getName());
+
+        String artist;
+
+        // Pattern is found
+        if (m.find())
+        {
+            // Extract artist
+            artist = m.group(2);
+        }
+        // Pattern not found
+        else
+        {
+            app.appendToLog("Incorrect format for file: " + file.getName() + "\n");
+            return;
+        }
+
+        // Open the directory for the artist
+        File artistDir = new File(outputFolder.getAbsolutePath() + "/" + artist);
+
+        // If the directory does not exist, create it
+        if (!artistDir.exists())
+        {
+            if (artistDir.mkdir()) {
+                app.appendToLog("Made new directory: " + artistDir.getAbsolutePath() + "\n");
+            }
+        }
+
+        // Open file inside artist directory
+        File check = new File(artistDir.getAbsolutePath() + "/" + file.getName());
+
+        // If the file does not exist, copy it
+        if (!check.exists())
+        {
+            try {
+                FileUtils.moveFile(new File(file.getAbsolutePath()),
+                        new File(artistDir.getAbsolutePath() + "/" + file.getName()));
+                app.appendToLog("Copied: " + file.getName() + "\n");
+            } catch (Exception e) {
+                app.appendToLog("Error copying files:\n" + getStackTrace(e));
             }
         }
     }

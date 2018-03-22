@@ -1,4 +1,4 @@
-package seledrex;
+package seledrex.app;
 
 //======================================================================================================================
 // Imports
@@ -12,6 +12,7 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 import java.io.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -39,13 +40,16 @@ public class App extends JPanel implements ActionListener
     // Properties
     //==================================================================================================================
 
-    private JButton addFolderButton, clearInputButton, setOutputButton, sortButton; // Buttons
-    private JButton loginButton, logoutButton, dlFavsButton, dlGalleryButton;
+    private JButton importArtworkButton, setStashButton, sortButton;
+    private JButton loginButton, logoutButton, dlArtworkButton;
     private JLabel statusLabel, stashLabel;
-    private JTextArea log; // Log
-    private JFileChooser fc; // File chooser
-    private ImageSorting sorter; // Image sorter
+    private JTextArea log;
+    private JFileChooser fc;
+    private ArtworkSorter sorter;
+    private File stashFolder;
+    private File downloadFolder;
     private WebClient webClient;
+    private Set<String> artworkSet;
     private static JFrame frame;
     private PropertiesConfiguration properties;
     private String username;
@@ -64,6 +68,7 @@ public class App extends JPanel implements ActionListener
         webClient = new WebClient();
         webClient.getOptions().setCssEnabled(false);
         webClient.getOptions().setJavaScriptEnabled(false);
+        webClient.getOptions().setTimeout(30000);
 
         // Enable cookies
         CookieManager manager = webClient.getCookieManager();
@@ -83,7 +88,10 @@ public class App extends JPanel implements ActionListener
         fc = new JFileChooser();
 
         // Create the image sorter
-        sorter = new ImageSorting();
+        sorter = new ArtworkSorter(this);
+
+        // Create the artwork set
+        artworkSet = new HashSet<String>();
 
         // Set the image sorter so that it will only show directories
         fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -107,35 +115,25 @@ public class App extends JPanel implements ActionListener
         logoutButton.setEnabled(false);
         logoutButton.addActionListener(this);
 
-        dlFavsButton = new JButton("Download favorites");
-        dlFavsButton.setPreferredSize(new Dimension(150, 25));
-        dlFavsButton.setEnabled(false);
-        dlFavsButton.addActionListener(this);
-
-        dlGalleryButton = new JButton("Download gallery");
-        dlGalleryButton.setPreferredSize(new Dimension(150, 25));
-        dlGalleryButton.setEnabled(false);
-        dlGalleryButton.addActionListener(this);
+        dlArtworkButton = new JButton("Download artwork");
+        dlArtworkButton.setPreferredSize(new Dimension(150, 25));
+        dlArtworkButton.setEnabled(false);
+        dlArtworkButton.addActionListener(this);
 
         // Create the 'Add input folder' button
-        addFolderButton = new JButton("Add input folder");
-        addFolderButton.setPreferredSize(new Dimension(150, 25));
-        addFolderButton.addActionListener(this);
+        importArtworkButton = new JButton("Import artwork");
+        importArtworkButton.setPreferredSize(new Dimension(150, 25));
+        importArtworkButton.addActionListener(this);
 
         // Create the 'Sort images' button
-        sortButton = new JButton("Sort images");
+        sortButton = new JButton("Sort artwork");
         sortButton.setPreferredSize(new Dimension(150, 25));
         sortButton.addActionListener(this);
 
         // Create the 'Set output folder' button
-        setOutputButton = new JButton("Set stash");
-        setOutputButton.setPreferredSize(new Dimension(150, 25));
-        setOutputButton.addActionListener(this);
-
-        // Create the 'Remove input folder(s)' button
-        clearInputButton = new JButton("Remove input folder(s)");
-        clearInputButton.setPreferredSize(new Dimension(150, 25));
-        clearInputButton.addActionListener(this);
+        setStashButton = new JButton("Set stash");
+        setStashButton.setPreferredSize(new Dimension(150, 25));
+        setStashButton.addActionListener(this);
 
         // Create a new panel to hold all the buttons
         JPanel topPanel = new JPanel(new GridBagLayout()); //use FlowLayout
@@ -160,29 +158,19 @@ public class App extends JPanel implements ActionListener
         cs.gridx = 2;
         cs.gridy = 0;
         cs.gridwidth = 1;
-        topPanel.add(dlFavsButton, cs);
+        topPanel.add(dlArtworkButton, cs);
 
         cs.gridx = 2;
         cs.gridy = 1;
         cs.gridwidth = 1;
-        topPanel.add(dlGalleryButton, cs);
+        topPanel.add(importArtworkButton, cs);
 
         cs.gridx = 3;
         cs.gridy = 0;
         cs.gridwidth = 1;
-        topPanel.add(addFolderButton, cs);
+        topPanel.add(setStashButton, cs);
 
         cs.gridx = 3;
-        cs.gridy = 1;
-        cs.gridwidth = 1;
-        topPanel.add(clearInputButton, cs);
-
-        cs.gridx = 4;
-        cs.gridy = 0;
-        cs.gridwidth = 1;
-        topPanel.add(setOutputButton, cs);
-
-        cs.gridx = 4;
         cs.gridy = 1;
         cs.gridwidth = 1;
         topPanel.add(sortButton, cs);
@@ -241,8 +229,7 @@ public class App extends JPanel implements ActionListener
                             loggedIn = true;
                             loginButton.setEnabled(false);
                             logoutButton.setEnabled(true);
-                            dlFavsButton.setEnabled(true);
-                            dlGalleryButton.setEnabled(true);
+                            dlArtworkButton.setEnabled(true);
                         }
                     }
                 }
@@ -258,7 +245,7 @@ public class App extends JPanel implements ActionListener
     }
 
     //==================================================================================================================
-    // Methods
+    // GUI Methods
     //==================================================================================================================
 
     /**
@@ -270,7 +257,7 @@ public class App extends JPanel implements ActionListener
     public void actionPerformed(ActionEvent e)
     {
         // Handles the 'Add input folder' button
-        if (e.getSource() == addFolderButton)
+        if (e.getSource() == importArtworkButton)
         {
             int returnVal = fc.showOpenDialog(App.this);
 
@@ -284,14 +271,13 @@ public class App extends JPanel implements ActionListener
             log.setCaretPosition(log.getDocument().getLength());
         }
         // Handles the 'Set output folder' button
-        else if (e.getSource() == setOutputButton)
+        else if (e.getSource() == setStashButton)
         {
             int returnVal = fc.showOpenDialog(App.this);
 
             if (returnVal == JFileChooser.APPROVE_OPTION) {
-                File file = fc.getSelectedFile();
-                log.append("Set output folder: " + file.getAbsolutePath() + "\n");
-                sorter.setOutputFolder(file);
+                setStash(fc.getSelectedFile());
+                log.append("Stash set: " + stashFolder.getAbsolutePath() + "\n");
             }
 
             log.setCaretPosition(log.getDocument().getLength());
@@ -301,10 +287,9 @@ public class App extends JPanel implements ActionListener
         {
             SwingWorker<String, Object> worker = new SwingWorker<String, Object>() {
                 @Override
-                protected String doInBackground() throws Exception {
-                    // Authenticate in the background
+                protected String doInBackground() {
                     log.append("Sorting images..." + "\n");
-                    sorter.sortImages(App.this);
+                    sorter.sortInputFolders();
                     return null;
                 }
 
@@ -314,12 +299,6 @@ public class App extends JPanel implements ActionListener
                 }
             };
             worker.execute();
-        }
-        // Handles the 'Remove input folder(s)' button
-        else if (e.getSource() == clearInputButton)
-        {
-            sorter.clearInputFolders();
-            log.append("Removed input folder(s)\n");
         }
         // Handles 'Login' button
         else if (e.getSource() == loginButton)
@@ -335,8 +314,7 @@ public class App extends JPanel implements ActionListener
                 loggedIn = true;
                 loginButton.setEnabled(false);
                 logoutButton.setEnabled(true);
-                dlFavsButton.setEnabled(true);
-                dlGalleryButton.setEnabled(true);
+                dlArtworkButton.setEnabled(true);
             }
         }
         // Handles 'Logout' button
@@ -346,8 +324,7 @@ public class App extends JPanel implements ActionListener
             setStatus("Not logged in");
             loggedIn = false;
             logoutButton.setEnabled(false);
-            dlFavsButton.setEnabled(false);
-            dlGalleryButton.setEnabled(false);
+            dlArtworkButton.setEnabled(false);
             loginButton.setEnabled(true);
 
             // Show dialog
@@ -356,6 +333,12 @@ public class App extends JPanel implements ActionListener
                     "You have successfully logged out.",
                     "Logout Success",
                     JOptionPane.INFORMATION_MESSAGE);
+        }
+        // Handles 'Download artwork' button
+        else if (e.getSource() == dlArtworkButton) {
+            // Create and show new dialog
+            DownloadDialog dlDialog = new DownloadDialog(frame, this);
+            dlDialog.setVisible(true);
         }
     }
 
@@ -375,13 +358,7 @@ public class App extends JPanel implements ActionListener
 
         // Write cookies to file
         if (loggedIn) {
-            try {
-                ObjectOutput out = new ObjectOutputStream(new FileOutputStream("cookie.file"));
-                out.writeObject(webClient.getCookieManager().getCookies());
-                out.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            writeCookies();
         } else {
             File cookieFile = new File("cookie.file");
             if (cookieFile.exists()) {
@@ -395,18 +372,25 @@ public class App extends JPanel implements ActionListener
         webClient.close();
     }
 
+    /**
+     * Performs initialization steps to be carried out after the main window
+     * has opened.
+     */
     private void initialize()
     {
+        // Check for stash setting in the properties file
         String stash = properties.getString("stash");
 
+        // Set the stash
         if (stash != null) {
-            File stashFile = new File(stash);
-            if (stashFile.exists()) {
-                stashLabel.setText("Stash location: " + stashFile.getAbsolutePath());
+            stashFolder = new File(stash);
+            if (stashFolder.exists()) {
+                setStash(stashFolder);
                 return;
             }
         }
 
+        // Tell user to set their stash
         JOptionPane.showMessageDialog(
                 this,
                 "Please select a folder to be your art stash.",
@@ -415,13 +399,11 @@ public class App extends JPanel implements ActionListener
 
         int returnVal = fc.showOpenDialog(App.this);
 
-        if (returnVal == JFileChooser.APPROVE_OPTION)
-        {
-            File stashFile = fc.getSelectedFile();
-            properties.setProperty("stash", stashFile.getAbsolutePath());
-            stashLabel.setText("Stash location: " + stashFile.getAbsolutePath());
+        // Set the selected folder as the stash
+        if (returnVal == JFileChooser.APPROVE_OPTION) {
+            setStash(fc.getSelectedFile());
         } else {
-            System.exit(1);
+            System.exit(5);
         }
     }
 
@@ -436,8 +418,8 @@ public class App extends JPanel implements ActionListener
         frame = new JFrame("Furaffinity Image Sorter");
         frame.add(app);
 
-        // Override window closing event
         frame.addWindowListener(new WindowAdapter(){
+            // Override window closing event
             @Override
             public void windowClosing(WindowEvent windowEvent)
             {
@@ -446,6 +428,7 @@ public class App extends JPanel implements ActionListener
                 System.exit(0);
             }
 
+            // Override window opening event
             @Override
             public void windowOpened(WindowEvent e) {
                 app.initialize();
@@ -461,12 +444,17 @@ public class App extends JPanel implements ActionListener
         frame.setVisible(true);
     }
 
+    //==================================================================================================================
+    // Helper Methods
+    //==================================================================================================================
+
     /**
      * Appends to the application's log.
      *
      * @param message  message to append
      */
-    void appendToLog(String message) {
+    void appendToLog(String message)
+    {
         log.append(message);
         log.setCaretPosition(log.getText().length() - 1);
     }
@@ -476,8 +464,68 @@ public class App extends JPanel implements ActionListener
      *
      * @param status  status message to set
      */
-    private void setStatus(String status) {
+    private void setStatus(String status)
+    {
         statusLabel.setText(status);
+    }
+
+    private void setStash(File file)
+    {
+        stashFolder = file;
+        properties.setProperty("stash", stashFolder.getAbsolutePath());
+        stashLabel.setText("Stash location: " + stashFolder.getAbsolutePath());
+        findAllArtwork(stashFolder);
+        sorter.setOutputFolder(file);
+        downloadFolder = new File(stashFolder.getAbsolutePath() + "/download");
+        if (!downloadFolder.exists()) {
+            if (downloadFolder.mkdir()) {
+                appendToLog("Download folder created: " + downloadFolder.getAbsolutePath() + "\n");
+            }
+        }
+    }
+
+    /**
+     * Recursive function that scans the stash and adds all pieces of artwork
+     * to the artwork stash set.
+     *
+     * @param src  stash folder to search from
+     */
+    private void findAllArtwork(File src)
+    {
+        if (src.isFile()) {
+            artworkSet.add(src.getName());
+        } else if (src.isDirectory()) {
+            File[] files = src.listFiles();
+            if (files != null && files.length > 0) {
+                for (File file : files) {
+                    findAllArtwork(file);
+                }
+            }
+        }
+    }
+
+    /**
+     * Simple getter for the Web Client.
+     *
+     * @return  the current web client instance
+     */
+    public WebClient getWebClient()
+    {
+        return webClient;
+    }
+
+    /**
+     * Writes the cookies in the Web Client to a file.
+     */
+    public void writeCookies()
+    {
+        try {
+            ObjectOutput out = new ObjectOutputStream(new FileOutputStream("cookie.file"));
+            out.writeObject(webClient.getCookieManager().getCookies());
+            out.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -485,9 +533,42 @@ public class App extends JPanel implements ActionListener
      *
      * @param username  username to set
      */
-    private void setUsername(String username) {
+    private void setUsername(String username)
+    {
         this.username = username;
         properties.setProperty("username", username);
+    }
+
+    /**
+     * Checks if the stash contains a certain file.
+     *
+     * @param filename  file to check
+     * @return          true if it is inside the stash
+     */
+    public boolean stashContains(String filename)
+    {
+        return artworkSet.contains(filename);
+    }
+
+    /**
+     * Adds a file to the stash.
+     *
+     * @param artwork  file to add
+     */
+    public void addToStash(File artwork)
+    {
+        sorter.sortFile(artwork);
+        artworkSet.add(artwork.getName());
+    }
+
+    /**
+     * Getter for returning the download folder.
+     *
+     * @return  current download folder
+     */
+    public File getDownloadFolder()
+    {
+        return downloadFolder;
     }
 
     //==================================================================================================================

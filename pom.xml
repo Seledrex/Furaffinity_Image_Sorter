@@ -22,7 +22,7 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>seledrex.App</mainClass>
+              <mainClass>seledrex.app.App</mainClass>
             </manifest>
           </archive>
           <descriptorRefs>
