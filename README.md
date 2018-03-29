@@ -29,7 +29,9 @@ The application takes advantage of browser cookies and property files. The brows
 
 ## TODO
 
-- Download all submissions
+- Download all submissions feature
+
+## Screenshots
 
 ![alt tag](https://raw.githubusercontent.com/Seledrex/Furaffinity_Image_Sorter/master/main.PNG)
 ![alt tag](https://raw.githubusercontent.com/Seledrex/Furaffinity_Image_Sorter/master/login_dialog.png)
