@@ -1,6 +1,6 @@
 # Furaffinity Image Sorter V1.0
 
-A Java application for downloading and sorting images from Furaffinity.
+A Java application for downloading and sorting images from Furaffinity. Implemented with Java 1.8, Maven, Java Swing, and HtmlUnit.
 
 ## Specifications
 
