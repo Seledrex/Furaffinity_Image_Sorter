@@ -645,7 +645,7 @@ public class DownloadDialog extends JDialog implements ActionListener, PropertyC
                     // Check if the stash already has this artwork
                     if (app.stashContains(submission)) {
                         appendToLog("Skipped: " + submission + "\n");
-                        continue;
+                        break;
                     }
 
                     UnexpectedPage artSrc = null;
