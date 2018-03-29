@@ -239,6 +239,7 @@ public class DownloadDialog extends JDialog implements ActionListener, PropertyC
         subProgressBar.setString("Initializing...");
 
         // Start new task
+        stop = false;
         task = new DownloadTask(type);
         task.addPropertyChangeListener(this);
         task.execute();
