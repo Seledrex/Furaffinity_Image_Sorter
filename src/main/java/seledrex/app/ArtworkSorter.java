@@ -4,7 +4,7 @@ package seledrex.app;
 // Imports
 //======================================================================================================================
 
-import javafx.util.Pair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import java.io.File;
@@ -116,7 +116,7 @@ class ArtworkSorter
                 for (File file : inputFolder) {
                     // Check if file extension is valid. Add file if valid, log error if not.
                     if (formatIsValid(FilenameUtils.getExtension(file.getName()))) {
-                        this.files.add( new Pair<String, String>(file.getName(), file.getAbsolutePath()));
+                        this.files.add(Pair.of(file.getName(), file.getAbsolutePath()));
                     }
                     else {
                         app.appendToLog("Invalid file format for file '" + file.getAbsolutePath() + "'\n");

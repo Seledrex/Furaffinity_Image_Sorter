@@ -2,3 +2,9 @@ target/
 user.properties
 capcha.jpg
 cookie.file
+
+# User-specific stuff
+.idea/**/workspace.xml
+
+# Sensitive or high-churn files
+.idea/**/uiDesigner.xml
