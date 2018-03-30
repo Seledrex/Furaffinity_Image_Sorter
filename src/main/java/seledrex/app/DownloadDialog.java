@@ -535,6 +535,7 @@ public class DownloadDialog extends JDialog implements ActionListener, PropertyC
             {
                 // Update progress bars
                 firePropertyChange("done", 0, 5);
+                stopButton.setEnabled(false);
             }
 
             // Re-enable controls
