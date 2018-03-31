@@ -23,10 +23,12 @@ The application takes advantage of browser cookies and property files. The brows
 1. Download and install [Java](https://java.com/en/download/) on your computer
 2. Download [Furaffinity Image Sorter.zip](https://github.com/Seledrex/Furaffinity_Image_Sorter/blob/master/Furaffinity%20Image%20Sorter.zip)
 3. Extract the folder
-5. If necessary, change your FA layout/theme to 'beta' (Account Settings > Account Personalization > Site Layout/Theme > Template > beta)
-6. Run the executable JAR file inside the folder
-7. Set your stash (can be the given stash folder or anywher else of your choosing)
-8. Download and sort images as much as you like!
+4. Access Furaffinity with your favorite web browser
+5. Change your layout/theme to 'beta' (Account Settings > Account Personalization > Site Layout/Theme > Template > beta)
+6. Save changes
+7. Run the executable JAR file inside the folder
+8. Set your stash (can be the given stash folder or anywher else of your choosing)
+9. Download and sort images as much as you like!
 
 ## TODO
 
